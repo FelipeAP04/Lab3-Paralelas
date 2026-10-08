@@ -13,6 +13,11 @@
  * Mejoras sobre la version original:
  *   1. (Fernando Rueda) El contexto de OpenSSL se configura una sola
  *      vez por operacion. En cada candidata solo se cambia la clave.
+ *   2. (Felipe Aguilar) Cada candidata se valida primero con un
+ *      fragmento conocido y luego con el mensaje completo.
+ *   3. (Fernando Hernandez) La clave, el rango y el mensaje se reciben
+ *      por linea de comandos:
+ *        busqueda_clave_aes_mejorado [-k clave] [-n rango] [-m mensaje]
  *----------------------------------------------------------------------*/
 
 #define _POSIX_C_SOURCE 200809L
@@ -20,29 +25,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
-#ifndef TOTAL_KEYS
-#define TOTAL_KEYS (UINT64_C(1) << 20)
-#endif
-#ifndef SECRET_KEY
-#define SECRET_KEY UINT64_C(12345)
-#endif
+/* Valores por defecto; se pueden cambiar con -n, -k y -m. */
+#define DEFAULT_TOTAL_KEYS (UINT64_C(1) << 20)
+#define DEFAULT_SECRET_KEY UINT64_C(12345)
+#define DEFAULT_MESSAGE "Puedes lograrlo!"
 #define MESSAGE_LEN 16
-#define KNOWN_FRAGMENT "Puedes"
-#define KNOWN_FRAGMENT_LEN (sizeof(KNOWN_FRAGMENT) - 1)
+#define KNOWN_FRAGMENT_LEN 6
 
-/* Texto original de 16 bytes; el cero final no se cifra. */
-static const unsigned char message[] = "Puedes lograrlo!";
-
-_Static_assert(
-    sizeof(message) - 1 == MESSAGE_LEN,
-    "El mensaje debe tener exactamente 16 bytes."
-);
+/*
+ * Parametros de la busqueda. El mensaje ocupa un bloque de 16 bytes;
+ * si es mas corto se completa con espacios.
+ */
+struct params {
+    uint64_t total_keys;
+    uint64_t secret_key;
+    unsigned char message[MESSAGE_LEN];
+    size_t fragment_len;
+};
 
 /* Muestra el error y termina el programa. */
 static void fail(const char *description)
@@ -122,15 +129,85 @@ static void crypt_block(
     }
 }
 
+/* Compara primero el fragmento conocido y luego el bloque completo. */
 static int is_valid_candidate(
     const unsigned char *plain,
-    const unsigned char *expected)
+    const struct params *p)
 {
-    if (memcmp(plain, KNOWN_FRAGMENT, KNOWN_FRAGMENT_LEN) != 0) {
+    if (memcmp(plain, p->message, p->fragment_len) != 0) {
         return 0;
     }
 
-    return memcmp(plain, expected, MESSAGE_LEN) == 0;
+    return memcmp(plain, p->message, MESSAGE_LEN) == 0;
+}
+
+static void usage(const char *program)
+{
+    fprintf(stderr,
+        "Uso: %s [-k clave] [-n rango] [-m mensaje]\n"
+        "  -k clave    clave secreta, 0 <= clave < rango (por defecto %" PRIu64 ")\n"
+        "  -n rango    cantidad de candidatas a probar (por defecto %" PRIu64 ")\n"
+        "  -m mensaje  texto de 1 a %d bytes (por defecto \"%s\")\n",
+        program, DEFAULT_SECRET_KEY, DEFAULT_TOTAL_KEYS,
+        MESSAGE_LEN, DEFAULT_MESSAGE);
+    exit(EXIT_FAILURE);
+}
+
+/* Convierte un entero sin signo de 64 bits y rechaza texto invalido. */
+static uint64_t parse_u64(const char *text, const char *program)
+{
+    char *end = NULL;
+
+    if (text[0] == '\0' || text[0] == '-') {
+        usage(program);
+    }
+
+    errno = 0;
+    unsigned long long value = strtoull(text, &end, 10);
+
+    if (errno != 0 || *end != '\0') {
+        usage(program);
+    }
+
+    return (uint64_t)value;
+}
+
+/* Lee -k, -n y -m; los que no se indiquen usan su valor por defecto. */
+static void parse_args(int argc, char **argv, struct params *p)
+{
+    const char *text = DEFAULT_MESSAGE;
+    int option;
+
+    p->total_keys = DEFAULT_TOTAL_KEYS;
+    p->secret_key = DEFAULT_SECRET_KEY;
+
+    while ((option = getopt(argc, argv, "k:n:m:h")) != -1) {
+        switch (option) {
+        case 'k':
+            p->secret_key = parse_u64(optarg, argv[0]);
+            break;
+        case 'n':
+            p->total_keys = parse_u64(optarg, argv[0]);
+            break;
+        case 'm':
+            text = optarg;
+            break;
+        default:
+            usage(argv[0]);
+        }
+    }
+
+    size_t len = strlen(text);
+
+    if (optind != argc || p->total_keys == 0 ||
+        p->secret_key >= p->total_keys ||
+        len == 0 || len > MESSAGE_LEN) {
+        usage(argv[0]);
+    }
+
+    memset(p->message, ' ', MESSAGE_LEN);
+    memcpy(p->message, text, len);
+    p->fragment_len = len < KNOWN_FRAGMENT_LEN ? len : KNOWN_FRAGMENT_LEN;
 }
 
 /* Obtiene el tiempo de un reloj monotono, en segundos. */
@@ -147,8 +224,12 @@ static double get_time(void)
            (double)current.tv_nsec / 1000000000.0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+    struct params p;
+
+    parse_args(argc, argv, &p);
+
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 
     if (ctx == NULL) {
@@ -165,10 +246,10 @@ int main(void)
 
     /*
      * Prepara el mensaje cifrado.
-     * SECRET_KEY solo se utiliza para preparar el ejercicio.
+     * La clave secreta solo se utiliza para preparar el ejercicio.
      */
     setup_cipher(ctx, 1);
-    crypt_block(ctx, SECRET_KEY, message, cipher);
+    crypt_block(ctx, p.secret_key, p.message, cipher);
 
     uint64_t found = UINT64_MAX;
 
@@ -178,11 +259,11 @@ int main(void)
     setup_cipher(ctx, 0);
 
     /* Prueba las claves consecutivamente desde cero. */
-    for (uint64_t key = 0; key < TOTAL_KEYS; key++) {
+    for (uint64_t key = 0; key < p.total_keys; key++) {
         crypt_block(ctx, key, cipher, plain);
 
         /* Primero valida el fragmento y luego el mensaje completo. */
-        if (is_valid_candidate(plain, message)) {
+        if (is_valid_candidate(plain, &p)) {
             found = key;
             break;
         }
@@ -199,6 +280,7 @@ int main(void)
         printf("No se encontro la clave.\n");
     }
 
+    printf("Rango: %" PRIu64 " candidatas\n", p.total_keys);
     printf("Ejecucion: secuencial\n");
     printf("Tiempo: %.6f segundos\n", elapsed);
 

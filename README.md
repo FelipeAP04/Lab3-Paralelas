@@ -29,6 +29,15 @@ make
 
 En macOS: `brew install openssl@3 open-mpi` y luego `make`.
 
+El programa mejorado y la versión MPI aceptan la clave, el rango y el mensaje
+(de 1 a 16 bytes) por línea de comandos. Si no se indican, usan los valores del
+original: clave 12345, rango 2^20 y `"Puedes lograrlo!"`.
+
+```bash
+./bin/busqueda_clave_aes_mejorado -k 999999 -n 1048576 -m "Hola MPI"
+mpirun -np 4 ./bin/busqueda_clave_aes_mpi -k 999999 -n 1048576 -m "Hola MPI"
+```
+
 ## Orden de commits
 
 Cada integrante hace sus commits seguidos y hace pull antes de empezar.
