@@ -134,7 +134,11 @@ Cada integrante compiló y ejecutó en su máquina el secuencial original, el me
 
 ### Felipe Aguilar
 
-Las corridas de Felipe Aguilar están registradas en texto en [evidencia/felipe_aguilar/corridas.md](evidencia/felipe_aguilar/corridas.md): compilación, secuencial original, secuencial mejorado y MPI con 2, 3 y 4 procesos.
+Las corridas están registradas en texto en [evidencia/felipe_aguilar/corridas.md](evidencia/felipe_aguilar/corridas.md): compilación, secuencial original, secuencial mejorado y MPI con 2, 3 y 4 procesos.
+
+**Captura de Procesos**
+
+![Evidencia Felipe Aguilar](evidencia/felipe_aguilar/Untitled.png)
 
 ### Fernando Hernández
 
