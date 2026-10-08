@@ -4,6 +4,8 @@
 
 **Integrantes:** Fernando Rueda, Felipe Aguilar, Fernando Hernández
 
+**Repositorio:** https://github.com/FelipeAP04/Lab3-Paralelas
+
 ## 1. Investigación sobre AES
 
 ### a) Campos de aplicación
