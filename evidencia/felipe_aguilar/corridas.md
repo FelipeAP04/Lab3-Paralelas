@@ -8,7 +8,7 @@ Comando ejecutado:
 make clean && make
 ```
 
-Resultado: compilacion correcta de los programas secuencial original, mejorado y MPI con `mpicc`.
+Resultado: compilación correcta de los programas secuencial original, mejorado y MPI con `mpicc`, sin warnings.
 
 ## Programa secuencial original
 
@@ -17,7 +17,7 @@ $ ./bin/busqueda_clave_aes_secuencial
 Clave encontrada: 12345
 Mensaje: Puedes lograrlo!
 Ejecucion: secuencial
-Tiempo: 0.002399 segundos
+Tiempo: 0.004433 segundos
 ```
 
 ## Programa secuencial mejorado
@@ -26,8 +26,9 @@ Tiempo: 0.002399 segundos
 $ ./bin/busqueda_clave_aes_mejorado
 Clave encontrada: 12345
 Mensaje: Puedes lograrlo!
+Rango: 1048576 candidatas
 Ejecucion: secuencial
-Tiempo: 0.001223 segundos
+Tiempo: 0.001246 segundos
 ```
 
 ## Version MPI con 2 procesos
@@ -36,8 +37,9 @@ Tiempo: 0.001223 segundos
 $ mpirun --oversubscribe -np 2 ./bin/busqueda_clave_aes_mpi
 Clave encontrada: 12345
 Mensaje: Puedes lograrlo!
+Rango: 1048576 candidatas
 Ejecucion: MPI con 2 procesos
-Tiempo: 0.006424 segundos
+Tiempo: 0.000692 segundos
 ```
 
 ## Version MPI con 3 procesos
@@ -46,8 +48,9 @@ Tiempo: 0.006424 segundos
 $ mpirun --oversubscribe -np 3 ./bin/busqueda_clave_aes_mpi
 Clave encontrada: 12345
 Mensaje: Puedes lograrlo!
+Rango: 1048576 candidatas
 Ejecucion: MPI con 3 procesos
-Tiempo: 0.012267 segundos
+Tiempo: 0.000717 segundos
 ```
 
 ## Version MPI con 4 procesos
@@ -56,8 +59,9 @@ Tiempo: 0.012267 segundos
 $ mpirun --oversubscribe -np 4 ./bin/busqueda_clave_aes_mpi
 Clave encontrada: 12345
 Mensaje: Puedes lograrlo!
+Rango: 1048576 candidatas
 Ejecucion: MPI con 4 procesos
-Tiempo: 0.012834 segundos
+Tiempo: 0.000719 segundos
 ```
 
 Todas las ejecuciones recuperaron la misma clave y el mismo mensaje.

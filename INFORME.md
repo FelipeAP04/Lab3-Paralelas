@@ -36,28 +36,39 @@ Para descifrar se aplican las transformaciones inversas (InvShiftRows, InvSubByt
 ### c) Diagrama de flujo
 
 ```mermaid
-flowchart TD
-   A[Inicio] --> B[Crear contexto AES]
-   B --> C[Cifrar mensaje con la clave secreta]
-   C --> D[Configurar descifrado una vez]
-   D --> E[Generar candidata]
-   E --> F[Descifrar bloque]
-   F --> G{Coincide el fragmento conocido?}
-   G -- No --> H{Quedan candidatas?}
-   G -- Si --> I{Coincide el mensaje completo?}
-   I -- No --> H
-   I -- Si --> J[Reportar clave y mensaje]
-   H -- Si --> E
-   H -- No --> K[Reportar que no se encontro]
-   J --> L[Fin]
-   K --> L
+flowchart LR
+   P[Texto plano 128 bits] --> E0[Estado inicial]
+   K[Clave AES-128] --> X[Expansion de clave: K0...K10]
+
+   subgraph C[Cifrado AES-128]
+      E0 --> A0[AddRoundKey con K0]
+      A0 --> R[9 rondas: SubBytes, ShiftRows, MixColumns y AddRoundKey]
+      R --> RF[Ronda 10: SubBytes, ShiftRows y AddRoundKey]
+      RF --> CT[Texto cifrado 128 bits]
+   end
+
+   CT --> D0[Estado cifrado]
+   subgraph D[Descifrado AES-128]
+      D0 --> DR[Ronda inversa con K10]
+      DR --> DI[9 rondas inversas: InvShiftRows, InvSubBytes, AddRoundKey e InvMixColumns]
+      DI --> DF[Ronda final inversa con K0]
+      DF --> PT[Texto plano recuperado]
+   end
+   X -.-> A0
+   X -.-> R
+   X -.-> RF
+   X -.-> DR
+   X -.-> DI
+   X -.-> DF
 ```
 
 ## 2. Análisis del programa secuencial
 
-El programa recibe un mensaje de 16 bytes y una clave candidata representada por un entero de 64 bits. `make_key` coloca ese entero en los ocho bytes menos significativos de una clave AES-128, mientras los bytes restantes quedan en cero. Primero se cifra el mensaje con `SECRET_KEY`; luego se prueban las candidatas en orden y se descifra el bloque con AES-128-ECB sin relleno.
+El programa original sí utiliza la implementación AES-128 de OpenSSL mediante `EVP_aes_128_ecb()`. AES-128 requiere una clave de 16 bytes y procesa bloques de 16 bytes; el programa cumple con el tamaño del bloque porque `MESSAGE_LEN` vale 16 y desactiva el relleno con `EVP_CIPHER_CTX_set_padding(ctx, 0)`. Por ello, el mensaje `"Puedes lograrlo!"` se cifra y se descifra como un único bloque completo.
 
-La mejora 1 configura el algoritmo y el relleno una sola vez. En cada iteracion solo cambia la clave del contexto y procesa el bloque. La busqueda termina cuando el texto descifrado coincide con el fragmento conocido y despues con el mensaje completo. Esta segunda comprobacion conserva la exactitud y evita aceptar una coincidencia parcial.
+La función `make_key` construye esos 16 bytes colocando la candidata de 64 bits en los ocho bytes menos significativos y dejando los ocho bytes restantes en cero. Después, `crypt_block` usa la clave construida para cifrar el mensaje con `SECRET_KEY`. Durante la búsqueda, el programa prueba candidatas desde cero, descifra el bloque cifrado con `encrypt = 0` y compara los 16 bytes obtenidos con el mensaje original. La misma clave sirve para cifrar y descifrar, pero OpenSSL aplica internamente las transformaciones inversas correspondientes.
+
+La implementación es correcta para el ejercicio, aunque no representa un uso seguro de AES en producción. El modo ECB no usa IV y revela patrones cuando se cifran varios bloques; además, no hay autenticación ni protección contra modificaciones. El espacio explorado tampoco es el de una clave AES-128 real: solo se prueban `2^20` candidatas y la función fija ocho bytes en cero, por lo que la fuerza bruta es viable únicamente por esta reducción artificial del espacio de búsqueda.
 
 ## 3. Errores conceptuales y mejoras
 
@@ -136,11 +147,17 @@ Cada integrante compiló y ejecutó en su máquina el secuencial original, el me
 
 ### Felipe Aguilar
 
-Las corridas están registradas en texto en [evidencia/felipe_aguilar/corridas.md](evidencia/felipe_aguilar/corridas.md): compilación, secuencial original, secuencial mejorado y MPI con 2, 3 y 4 procesos.
+La compilación se realizó con:
 
-**Captura de Procesos**
+```bash
+make clean && make
+```
 
-![Evidencia Felipe Aguilar](evidencia/felipe_aguilar/Untitled.png)
+El comando terminó correctamente y compiló los tres programas sin warnings. Las corridas están registradas en [evidencia/felipe_aguilar/corridas.md](evidencia/felipe_aguilar/corridas.md), y la captura muestra los comandos y resultados del secuencial original, el mejorado y MPI con 2, 3 y 4 procesos.
+
+**Captura de corridas**
+
+![Corridas secuencial y MPI - Felipe Aguilar](evidencia/felipe_aguilar/01_corridas_secuencial_y_mpi.png)
 
 ### Fernando Hernández
 
