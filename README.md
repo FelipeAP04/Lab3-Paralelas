@@ -38,6 +38,12 @@ original: clave 12345, rango 2^20 y `"Puedes lograrlo!"`.
 mpirun -np 4 ./bin/busqueda_clave_aes_mpi -k 999999 -n 1048576 -m "Hola MPI"
 ```
 
+`scripts/verificar.sh [clave] [rango] [mensaje]` compila, corre el mejorado, el
+original (solo con los valores por defecto) y la versión MPI con 2, 3 y 4
+procesos, confirma que todos recuperan la misma clave y el mismo mensaje y
+muestra el tiempo promedio y el speedup de cada uno. Para medir el speedup
+usamos `scripts/verificar.sh 16777215 16777216`, con la clave al final del rango.
+
 ## Orden de commits
 
 Cada integrante hace sus commits seguidos y hace pull antes de empezar.

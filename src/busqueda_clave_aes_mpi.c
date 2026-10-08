@@ -24,6 +24,15 @@
 #define MESSAGE_LEN 16
 #define KNOWN_FRAGMENT_LEN 6
 
+/*
+ * Candidatas que cada proceso prueba entre dos sincronizaciones.
+ * Sincronizar en cada candidata hacia que la comunicacion costara mas
+ * que el descifrado; con bloques el costo se reparte.
+ */
+#ifndef CHECK_INTERVAL
+#define CHECK_INTERVAL UINT64_C(4096)
+#endif
+
 /* Mensaje de un bloque, completado con espacios si es mas corto. */
 struct params {
     uint64_t total_keys;
@@ -202,35 +211,46 @@ int main(int argc, char **argv)
     setup_cipher(ctx, 0);
 
     uint64_t found = UINT64_MAX;
-    uint64_t global_found = UINT64_MAX;
     uint64_t offset = 0;
-    int active = 1;
 
-    while (active) {
-        uint64_t local_found = UINT64_MAX;
+    for (;;) {
+        /* local[0]: clave encontrada; local[1]: 1 si ya termino su bloque. */
+        uint64_t local[2] = {UINT64_MAX, 0};
+        uint64_t global[2];
+        uint64_t limit = count - offset < CHECK_INTERVAL
+                         ? count : offset + CHECK_INTERVAL;
 
-        if (offset < count) {
+        for (; offset < limit; offset++) {
             uint64_t candidate = start + offset;
             crypt_block(ctx, candidate, cipher, plain);
             if (is_valid_candidate(plain, &p)) {
-                local_found = candidate;
+                local[0] = candidate;
+                break;
             }
-            offset++;
         }
+        local[1] = offset >= count;
 
-        MPI_Allreduce(&local_found, &global_found, 1,
-                      MPI_UINT64_T, MPI_MIN, MPI_COMM_WORLD);
-        if (global_found != UINT64_MAX) {
-            found = global_found;
+        /*
+         * Una sola colectiva por ronda: MPI_MIN da la clave encontrada
+         * (o UINT64_MAX) y vale 1 en la segunda posicion solo si todos
+         * los procesos terminaron su bloque.
+         */
+        MPI_Allreduce(local, global, 2, MPI_UINT64_T, MPI_MIN,
+                      MPI_COMM_WORLD);
+        if (global[0] != UINT64_MAX) {
+            found = global[0];
             break;
         }
-
-        int local_active = offset < count;
-        MPI_Allreduce(&local_active, &active, 1,
-                      MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+        if (global[1] == 1) {
+            break;
+        }
     }
 
-    double elapsed = MPI_Wtime() - start_time;
+    /* Se reporta el tiempo del proceso mas lento. */
+    double local_elapsed = MPI_Wtime() - start_time;
+    double elapsed = 0.0;
+    MPI_Reduce(&local_elapsed, &elapsed, 1, MPI_DOUBLE, MPI_MAX, 0,
+               MPI_COMM_WORLD);
 
     if (rank == 0) {
         if (found != UINT64_MAX) {
