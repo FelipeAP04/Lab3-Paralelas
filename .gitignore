@@ -1,0 +1,5 @@
+# Binarios
+bin/
+*.o
+
+.DS_Store
