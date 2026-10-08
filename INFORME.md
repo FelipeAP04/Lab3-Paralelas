@@ -104,11 +104,60 @@ Llegar a estos números requirió cambiar la frecuencia de sincronización. La p
 
 ## Evidencia
 
-Las capturas y registros de cada integrante están en `evidencia/`. La evidencia de las corridas realizadas por Felipe Aguilar está documentada en [evidencia/felipe_aguilar/corridas.md](evidencia/felipe_aguilar/corridas.md) e incluye:
+Cada integrante compiló y ejecutó en su máquina el secuencial original, el mejorado y la versión MPI con 2, 3 y 4 procesos. Fernando Rueda y Fernando Hernández corrieron además la verificación del peor caso con `scripts/verificar.sh`. En todas las corridas se recuperó la clave `12345` con el mensaje `Puedes lograrlo!`, y en el peor caso la clave `16777215`.
 
-- Compilación de los programas.
-- Ejecución del programa secuencial original.
-- Ejecución del programa secuencial mejorado.
-- Ejecución de MPI con 2, 3 y 4 procesos.
+### Fernando Rueda
 
-Todas las corridas recuperaron la clave `12345` y el mensaje `Puedes lograrlo!`.
+**1. Compilación y secuencial original**
+
+![Compilación y secuencial original - Fernando Rueda](evidencia/fernando_rueda/01_compilacion_y_secuencial_original.png)
+
+**2. Secuencial mejorado**
+
+![Secuencial mejorado - Fernando Rueda](evidencia/fernando_rueda/02_mejorado.png)
+
+**3. MPI con 2 procesos**
+
+![MPI con 2 procesos - Fernando Rueda](evidencia/fernando_rueda/03_mpi_2_procesos.png)
+
+**4. MPI con 3 procesos**
+
+![MPI con 3 procesos - Fernando Rueda](evidencia/fernando_rueda/04_mpi_3_procesos.png)
+
+**5. MPI con 4 procesos**
+
+![MPI con 4 procesos - Fernando Rueda](evidencia/fernando_rueda/05_mpi_4_procesos.png)
+
+**6. Verificación y speedup en el peor caso (clave 16,777,215, rango 2²⁴)**
+
+![Verificación y speedup en el peor caso (clave 16,777,215, rango 2²⁴) - Fernando Rueda](evidencia/fernando_rueda/06_verificacion_peor_caso.png)
+
+### Felipe Aguilar
+
+Las corridas de Felipe Aguilar están registradas en texto en [evidencia/felipe_aguilar/corridas.md](evidencia/felipe_aguilar/corridas.md): compilación, secuencial original, secuencial mejorado y MPI con 2, 3 y 4 procesos.
+
+### Fernando Hernández
+
+**1. Compilación y secuencial original**
+
+![Compilación y secuencial original - Fernando Hernández](evidencia/fernando_hernandez/01_compilacion_y_secuencial_original.png)
+
+**2. Secuencial mejorado**
+
+![Secuencial mejorado - Fernando Hernández](evidencia/fernando_hernandez/02_mejorado.png)
+
+**3. MPI con 2 procesos**
+
+![MPI con 2 procesos - Fernando Hernández](evidencia/fernando_hernandez/03_mpi_2_procesos.png)
+
+**4. MPI con 3 procesos**
+
+![MPI con 3 procesos - Fernando Hernández](evidencia/fernando_hernandez/04_mpi_3_procesos.png)
+
+**5. MPI con 4 procesos**
+
+![MPI con 4 procesos - Fernando Hernández](evidencia/fernando_hernandez/05_mpi_4_procesos.png)
+
+**6. Verificación y speedup en el peor caso (clave 16,777,215, rango 2²⁴)**
+
+![Verificación y speedup en el peor caso (clave 16,777,215, rango 2²⁴) - Fernando Hernández](evidencia/fernando_hernandez/06_verificacion_peor_caso.png)
