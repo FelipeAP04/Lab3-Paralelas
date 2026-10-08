@@ -104,4 +104,11 @@ Llegar a estos números requirió cambiar la frecuencia de sincronización. La p
 
 ## Evidencia
 
-Las capturas de cada integrante están en `evidencia/`.
+Las capturas y registros de cada integrante están en `evidencia/`. La evidencia de las corridas realizadas por Felipe Aguilar está documentada en [evidencia/felipe_aguilar/corridas.md](evidencia/felipe_aguilar/corridas.md) e incluye:
+
+- Compilación de los programas.
+- Ejecución del programa secuencial original.
+- Ejecución del programa secuencial mejorado.
+- Ejecución de MPI con 2, 3 y 4 procesos.
+
+Todas las corridas recuperaron la clave `12345` y el mensaje `Puedes lograrlo!`.
