@@ -16,7 +16,8 @@ endif
 BIN = bin
 SRC = src
 
-PROGRAMAS = $(BIN)/busqueda_clave_aes_secuencial
+PROGRAMAS = $(BIN)/busqueda_clave_aes_secuencial \
+            $(BIN)/busqueda_clave_aes_mejorado
 
 all: $(PROGRAMAS)
 
@@ -24,6 +25,9 @@ $(BIN):
 	mkdir -p $(BIN)
 
 $(BIN)/busqueda_clave_aes_secuencial: $(SRC)/busqueda_clave_aes_secuencial.c | $(BIN)
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) $(LDLIBS)
+
+$(BIN)/busqueda_clave_aes_mejorado: $(SRC)/busqueda_clave_aes_mejorado.c | $(BIN)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) $(LDLIBS)
 
 clean:
