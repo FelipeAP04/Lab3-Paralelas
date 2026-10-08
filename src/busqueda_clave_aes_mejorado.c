@@ -33,6 +33,8 @@
 #define SECRET_KEY UINT64_C(12345)
 #endif
 #define MESSAGE_LEN 16
+#define KNOWN_FRAGMENT "Puedes"
+#define KNOWN_FRAGMENT_LEN (sizeof(KNOWN_FRAGMENT) - 1)
 
 /* Texto original de 16 bytes; el cero final no se cifra. */
 static const unsigned char message[] = "Puedes lograrlo!";
@@ -120,6 +122,17 @@ static void crypt_block(
     }
 }
 
+static int is_valid_candidate(
+    const unsigned char *plain,
+    const unsigned char *expected)
+{
+    if (memcmp(plain, KNOWN_FRAGMENT, KNOWN_FRAGMENT_LEN) != 0) {
+        return 0;
+    }
+
+    return memcmp(plain, expected, MESSAGE_LEN) == 0;
+}
+
 /* Obtiene el tiempo de un reloj monotono, en segundos. */
 static double get_time(void)
 {
@@ -168,8 +181,8 @@ int main(void)
     for (uint64_t key = 0; key < TOTAL_KEYS; key++) {
         crypt_block(ctx, key, cipher, plain);
 
-        /* Verifica todos los bytes del mensaje conocido. */
-        if (memcmp(plain, message, MESSAGE_LEN) == 0) {
+        /* Primero valida el fragmento y luego el mensaje completo. */
+        if (is_valid_candidate(plain, message)) {
             found = key;
             break;
         }

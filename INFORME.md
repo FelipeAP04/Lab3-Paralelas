@@ -33,11 +33,29 @@ Para descifrar se aplican las transformaciones inversas (InvShiftRows, InvSubByt
 
 ### c) Diagrama de flujo
 
-<!-- Felipe Aguilar -->
+```mermaid
+flowchart TD
+   A[Inicio] --> B[Crear contexto AES]
+   B --> C[Cifrar mensaje con la clave secreta]
+   C --> D[Configurar descifrado una vez]
+   D --> E[Generar candidata]
+   E --> F[Descifrar bloque]
+   F --> G{Coincide el fragmento conocido?}
+   G -- No --> H{Quedan candidatas?}
+   G -- Si --> I{Coincide el mensaje completo?}
+   I -- No --> H
+   I -- Si --> J[Reportar clave y mensaje]
+   H -- Si --> E
+   H -- No --> K[Reportar que no se encontro]
+   J --> L[Fin]
+   K --> L
+```
 
 ## 2. Análisis del programa secuencial
 
-<!-- Felipe Aguilar -->
+El programa recibe un mensaje de 16 bytes y una clave candidata representada por un entero de 64 bits. `make_key` coloca ese entero en los ocho bytes menos significativos de una clave AES-128, mientras los bytes restantes quedan en cero. Primero se cifra el mensaje con `SECRET_KEY`; luego se prueban las candidatas en orden y se descifra el bloque con AES-128-ECB sin relleno.
+
+La mejora 1 configura el algoritmo y el relleno una sola vez. En cada iteracion solo cambia la clave del contexto y procesa el bloque. La busqueda termina cuando el texto descifrado coincide con el fragmento conocido y despues con el mensaje completo. Esta segunda comprobacion conserva la exactitud y evita aceptar una coincidencia parcial.
 
 ## 3. Errores conceptuales y mejoras
 
@@ -51,13 +69,15 @@ Todas las mejoras están en `src/busqueda_clave_aes_mejorado.c`. El programa ori
 
 **Mejora 1, rendimiento (propuesta por Fernando Rueda).** En el original, `crypt_block` llama a `EVP_CipherInit_ex` con `EVP_aes_128_ecb()` y a `EVP_CIPHER_CTX_set_padding` en cada una de las candidatas, de modo que OpenSSL vuelve a buscar el algoritmo y a configurar el contexto más de un millón de veces aunque nunca cambien. Separamos esa parte en `setup_cipher`, que se llama una sola vez antes del ciclo, y dentro del ciclo solo cambiamos la clave con `EVP_CipherInit_ex(ctx, NULL, NULL, key, NULL, -1)`. Probando con la última clave del rango (1,048,575) para recorrerlo completo, el tiempo bajó de unos 0.19 s a 0.04 s, lo que significa que casi el 80 % del trabajo era reconfigurar el contexto y no descifrar. Esto también ayuda a la versión MPI, porque cada proceso hace menos trabajo por candidata.
 
-<!-- Cada integrante documenta su mejora -->
+**Mejora 2, validación por fragmento conocido (Felipe Aguilar).** Cada candidata descifrada se compara primero contra el prefijo `"Puedes"`, de seis bytes. La mayoría de candidatas se descarta con esta comparación corta y solo una coincidencia continúa hacia la comparación de los 16 bytes completos. Así se reduce el trabajo de validación sin sacrificar la corrección del resultado. La misma regla se utiliza en la versión MPI.
 
 ## 4. Versión paralela con Open MPI
 
 ### a) Diseño de la versión paralela
 
-<!-- Felipe Aguilar -->
+La versión MPI divide el rango total de candidatas en bloques contiguos. Si el rango no es divisible entre los procesos, los primeros procesos reciben una candidata adicional. Cada proceso crea su propio contexto AES, cifra localmente el mensaje de referencia y descifra únicamente su bloque.
+
+La terminación se coordina por rondas con `MPI_Allreduce`. En cada ronda, cada proceso aporta la menor clave encontrada o `UINT64_MAX` si no encontró ninguna. `MPI_MIN` produce una única clave global; si todos terminan su bloque sin encontrarla, `MPI_LOR` determina que ya no quedan procesos activos. Los procesos sin candidatas siguen participando en las colectivas, por lo que no se producen bloqueos. Finalmente, el proceso 0 imprime una sola vez la clave, el mensaje, el número de procesos y el tiempo.
 
 ### b) Tiempos y speedup
 

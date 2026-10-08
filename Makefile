@@ -17,7 +17,8 @@ BIN = bin
 SRC = src
 
 PROGRAMAS = $(BIN)/busqueda_clave_aes_secuencial \
-            $(BIN)/busqueda_clave_aes_mejorado
+			$(BIN)/busqueda_clave_aes_mejorado \
+			$(BIN)/busqueda_clave_aes_mpi
 
 all: $(PROGRAMAS)
 
@@ -29,6 +30,9 @@ $(BIN)/busqueda_clave_aes_secuencial: $(SRC)/busqueda_clave_aes_secuencial.c | $
 
 $(BIN)/busqueda_clave_aes_mejorado: $(SRC)/busqueda_clave_aes_mejorado.c | $(BIN)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) $(LDLIBS)
+
+$(BIN)/busqueda_clave_aes_mpi: $(SRC)/busqueda_clave_aes_mpi.c | $(BIN)
+	$(MPICC) $(CFLAGS) $< -o $@ $(LDFLAGS) $(LDLIBS)
 
 clean:
 	rm -rf $(BIN)
